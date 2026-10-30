@@ -63,6 +63,10 @@ target_compile_definitions(nmapstudio PRIVATE
 # Mongoose: plain TCP (we only bind to localhost), no TLS dependency
 target_compile_definitions(nmapstudio PRIVATE MG_ENABLE_TLS=0)
 
+if(MSVC)
+  target_compile_definitions(nmapstudio PRIVATE _CRT_SECURE_NO_WARNINGS _WINSOCK_DEPRECATED_NO_WARNINGS)
+endif()
+
 # ------------------------------------------------------------------ linking
 if(WIN32)
   target_link_libraries(nmapstudio PRIVATE ws2_32)
