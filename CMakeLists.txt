@@ -69,7 +69,7 @@ endif()
 
 # ------------------------------------------------------------------ linking
 if(WIN32)
-  target_link_libraries(nmapstudio PRIVATE ws2_32)
+  target_link_libraries(nmapstudio PRIVATE ws2_32 shell32)
 else()
   find_package(Threads REQUIRED)
   target_link_libraries(nmapstudio PRIVATE Threads::Threads ${CMAKE_DL_LIBS} m)

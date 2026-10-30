@@ -12,6 +12,13 @@
 
 /* ---------------- threads & mutexes ---------------- */
 #if defined(NS_WINDOWS)
+  /* winsock2.h must precede windows.h, and WIN32_LEAN_AND_MEAN stops windows.h
+     from pulling in the legacy winsock.h — otherwise this header and
+     mongoose (which uses winsock2) clash when both are included in one TU. */
+  #ifndef WIN32_LEAN_AND_MEAN
+  #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <winsock2.h>
   #include <windows.h>
   typedef HANDLE           ns_thread;
   typedef CRITICAL_SECTION ns_mutex;

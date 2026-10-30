@@ -122,6 +122,7 @@ int ns_exe_dir(char *out, size_t outsz) {
 /* ============================================================ WINDOWS */
 #if defined(NS_WINDOWS)
 #include <process.h>
+#include <shellapi.h>   /* ShellExecuteA (excluded by WIN32_LEAN_AND_MEAN) */
 
 struct ns_proc {
     PROCESS_INFORMATION pi;
