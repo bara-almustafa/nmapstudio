@@ -1,0 +1,8 @@
+/build/
+*.o
+*.obj
+*.db
+*.db-wal
+*.db-shm
+nmapstudio
+nmapstudio.exe

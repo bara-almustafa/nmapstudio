@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nmap Studio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" opacity=".5"/>
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+      </svg>
+      <h1>Nmap Studio</h1>
+      <span class="ver">v0.1</span>
+      <span class="spacer"></span>
+      <span class="status"><span class="dot" id="wsdot"></span><span id="wstext">connecting…</span></span>
+    </div>
+
+    <div class="controls">
+      <div class="field">
+        <label>Targets</label>
+        <input type="text" id="targets" placeholder="scanme.nmap.org  192.168.1.0/24  10.0.0.1-50" autofocus>
+      </div>
+      <div class="field">
+        <label>Profile</label>
+        <select id="profile"></select>
+      </div>
+      <div class="btns">
+        <button class="btn primary" id="scanBtn">▶ Scan</button>
+        <button class="btn danger" id="stopBtn" disabled>■ Stop</button>
+      </div>
+    </div>
+
+    <div class="flags" id="flags">
+      <label><input type="checkbox" data-flag="-sV"> Version (-sV)</label>
+      <label><input type="checkbox" data-flag="-sC"> Default scripts (-sC)</label>
+      <label><input type="checkbox" data-flag="-O"> OS detect (-O)</label>
+      <label><input type="checkbox" data-flag="-Pn"> No ping (-Pn)</label>
+      <label><input type="checkbox" data-flag="-sS"> SYN (-sS)</label>
+      <label><input type="checkbox" data-flag="-sU"> UDP (-sU)</label>
+      <label><input type="checkbox" data-flag="--traceroute"> Traceroute</label>
+      <span class="sep"></span>
+      <label>Timing
+        <select id="timing" style="width:auto;display:inline-block;padding:3px 6px">
+          <option value="">default</option><option>-T0</option><option>-T1</option>
+          <option>-T2</option><option>-T3</option><option selected>-T4</option><option>-T5</option>
+        </select>
+      </label>
+      <label>Ports <input type="text" id="ports" placeholder="1-1000, 80,443"></label>
+    </div>
+
+    <div class="cmdrow">
+      <div class="cmd" id="cmdPreview" contenteditable="true" spellcheck="false"></div>
+      <button class="btn" id="copyCmd" title="Copy">⧉</button>
+    </div>
+    <div class="progress" id="prog"><div class="bar" id="progbar"></div></div>
+    <div class="ptext" id="ptext"></div>
+  </header>
+
+  <div class="main">
+    <nav id="nav">
+      <a data-view="hosts" class="active">Hosts <span class="count" id="cHosts">0</span></a>
+      <a data-view="topo">Topology</a>
+      <a data-view="history">History</a>
+      <a data-view="diff">Diff</a>
+      <a data-view="nse">NSE Scripts</a>
+      <a data-view="inventory">Inventory</a>
+    </nav>
+
+    <div class="content">
+      <!-- HOSTS -->
+      <div class="view flexcol active" id="view-hosts">
+        <div class="toolbar">
+          <input type="text" id="hostFilter" placeholder="filter host / service / port…">
+          <label class="mut"><input type="checkbox" id="openOnly"> open ports only</label>
+          <span class="spacer"></span>
+          <button class="btn" id="expHtml">Export HTML</button>
+          <button class="btn" id="expCsv">Export CSV</button>
+          <button class="btn" id="expJson">Export JSON</button>
+        </div>
+        <div class="scroll" id="hostList"><div class="empty">No results yet — run a scan.</div></div>
+      </div>
+
+      <!-- TOPOLOGY -->
+      <div class="view flexcol" id="view-topo">
+        <div class="topowrap">
+          <canvas id="topo"></canvas>
+          <div class="topohint">drag to pan · scroll to zoom · node size = open ports</div>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="view" id="view-history">
+        <div class="selbar">
+          <button class="btn" id="refreshHist">⟳ Refresh</button>
+          <span class="mut">click a run to load it</span>
+        </div>
+        <table><thead><tr><th>#</th><th>Name</th><th>Targets</th><th>Up</th><th>Down</th>
+          <th>Elapsed</th><th>Status</th><th>When</th></tr></thead>
+          <tbody id="histBody"></tbody></table>
+      </div>
+
+      <!-- DIFF -->
+      <div class="view" id="view-diff">
+        <div class="selbar">
+          <span class="mut">baseline</span><select id="diffA" style="width:auto"></select>
+          <span class="mut">compare</span><select id="diffB" style="width:auto"></select>
+          <button class="btn primary" id="runDiff">Compare</button>
+        </div>
+        <div class="cols">
+          <div class="card added"><h3>▲ New open ports</h3><div id="diffAdded" class="empty">—</div></div>
+          <div class="card removed"><h3>▼ Gone / closed</h3><div id="diffRemoved" class="empty">—</div></div>
+          <div class="card changed"><h3>≠ Service changed</h3><div id="diffChanged" class="empty">—</div></div>
+        </div>
+      </div>
+
+      <!-- NSE -->
+      <div class="view" id="view-nse">
+        <div class="selbar">
+          <input type="text" id="nseFilter" placeholder="search scripts…" style="max-width:260px">
+          <select id="nseCat" style="width:auto"><option value="">all categories</option></select>
+          <span class="mut" id="nseDir"></span>
+        </div>
+        <div id="nseList"><div class="empty">Loading script catalog…</div></div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="view" id="view-inventory">
+        <div class="selbar"><button class="btn" id="refreshInv">⟳ Refresh</button>
+          <span class="mut">every host ever seen, across all scans</span></div>
+        <table><thead><tr><th>IP</th><th>Hostname</th><th>OS</th><th>Scans seen</th><th>Last run</th></tr></thead>
+          <tbody id="invBody"></tbody></table>
+      </div>
+
+      <div class="console" id="console"></div>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
