@@ -3,10 +3,19 @@ name: release
 on:
   push:
     tags: ['v*']
-  workflow_dispatch: {}      # allow manual test builds
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to create/update (e.g. v0.1.0)'
+        required: true
+        default: 'v0.1.0'
 
 permissions:
-  contents: write            # needed to create the GitHub Release
+  contents: write            # needed to create the tag + GitHub Release
+
+env:
+  # tag on a tag-push, or the chosen input on a manual run
+  VERSION: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -36,7 +45,6 @@ jobs:
       - name: Build
         run: cmake --build build --config Release -j
 
-      # ---- stage the self-contained binary + docs ----
       - name: Stage (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -54,28 +62,43 @@ jobs:
           Copy-Item build/Release/nmapstudio.exe dist/
           Copy-Item README.md dist/
 
-      # ---- package ----
       - name: Package (tar.gz)
         if: matrix.archive == 'tar'
-        run: tar -C dist -czf nmapstudio-${{ github.ref_name }}-${{ matrix.name }}.tar.gz .
+        run: tar -C dist -czf nmapstudio-${VERSION}-${{ matrix.name }}.tar.gz .
 
       - name: Package (zip)
         if: matrix.archive == 'zip'
         shell: pwsh
-        run: Compress-Archive -Path dist/* -DestinationPath nmapstudio-${{ github.ref_name }}-${{ matrix.name }}.zip
+        run: Compress-Archive -Path dist/* -DestinationPath "nmapstudio-$env:VERSION-${{ matrix.name }}.zip"
 
-      # ---- make the artifact available for manual (non-tag) runs ----
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: nmapstudio-${{ matrix.name }}
           path: nmapstudio-*-${{ matrix.name }}.*
+          if-no-files-found: error
 
-      # ---- attach to the GitHub Release (tag pushes only) ----
-      - name: Publish to Release
-        if: startsWith(github.ref, 'refs/tags/')
+  release:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -R artifacts
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: nmapstudio-${{ github.ref_name }}-${{ matrix.name }}.*
+          tag_name: ${{ env.VERSION }}
+          name: Nmap Studio ${{ env.VERSION }}
+          files: artifacts/**
           generate_release_notes: true
           fail_on_unmatched_files: true
